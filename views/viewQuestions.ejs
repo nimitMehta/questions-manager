@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= paperName %> - <%= year %></title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .page-title {
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            min-height: 44px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+
+        .questions-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .question-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+            transition: all 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .question-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .question-number {
+            background: #3b82f6;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .options-container {
+            margin: 20px 0;
+        }
+
+        .option-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .option-item.correct {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .option-label {
+            font-weight: 700;
+            color: #3b82f6;
+            margin-right: 10px;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .option-label.correct-label {
+            color: #28a745;
+        }
+
+        .correct-answer-badge {
+            background: #28a745;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .explanation-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .explanation-title {
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #cbd5e1;
+        }
+
+        .paper-header-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .paper-title-large {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+
+        .paper-year-badge {
+            display: inline-block;
+            background: #64748b;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        @media only screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header-card {
+                padding: 20px;
+            }
+
+            .header-card .d-flex {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+
+            .header-card .page-title {
+                font-size: 24px;
+                margin-bottom: 15px;
+            }
+
+            .questions-container {
+                padding: 20px;
+            }
+
+            .question-card {
+                padding: 15px;
+            }
+
+            .question-header {
+                flex-direction: column;
+            }
+
+            .question-number {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+
+            .question-text {
+                font-size: 16px;
+            }
+
+            .option-item {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .option-label {
+                min-width: 70px;
+                font-size: 14px;
+            }
+
+            .correct-answer-badge {
+                display: block;
+                margin-top: 5px;
+                margin-left: 0;
+                width: fit-content;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons .btn {
+                width: 100%;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            .paper-title-large {
+                font-size: 22px;
+            }
+        }
+
+        @media only screen and (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .main-container {
+                max-width: 100%;
+            }
+
+            .header-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .questions-container {
+                padding: 15px;
+            }
+
+            .question-card {
+                padding: 12px;
+                margin-bottom: 15px;
+            }
+
+            .question-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .question-number {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+
+            .question-text {
+                font-size: 15px;
+                margin-bottom: 15px;
+            }
+
+            .option-item {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .option-label {
+                min-width: 60px;
+                font-size: 13px;
+            }
+
+            .correct-answer-badge {
+                font-size: 12px;
+                padding: 4px 10px;
+            }
+
+            .explanation-box {
+                padding: 12px;
+                margin-top: 15px;
+            }
+
+            .action-buttons {
+                gap: 10px;
+            }
+
+            .btn {
+                min-height: 48px;
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+
+            .paper-title-large {
+                font-size: 18px;
+            }
+
+            .section-title {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <a href="/" class="btn btn-info">
+                    <i class="fas fa-arrow-left"></i> Back to Papers
+                </a>
+                <a href="/question/add?paperName=<%= encodeURIComponent(paperName) %>&year=<%= encodeURIComponent(year) %>" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Add More Questions
+                </a>
+            </div>
+            <div class="paper-header-info">
+                <div class="paper-title-large">
+                    <i class="fas fa-file-alt"></i> <%= paperName %>
+                </div>
+                <div class="paper-year-badge">
+                    <i class="fas fa-calendar"></i> Year: <%= year %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions List -->
+        <div class="questions-container">
+            <h2 class="section-title">
+                <i class="fas fa-list"></i> Questions 
+                <span class="badge badge-primary" style="background: #3b82f6;"><%= questionsList.length %></span>
+            </h2>
+
+            <% if (questionsList.length === 0) { %>
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h4>No questions yet</h4>
+                    <p>Start by adding your first question!</p>
+                    <a href="/question/add?paperName=<%= encodeURIComponent(paperName) %>&year=<%= encodeURIComponent(year) %>" class="btn btn-success mt-3">
+                        <i class="fas fa-plus"></i> Add First Question
+                    </a>
+                </div>
+            <% } else { %>
+                <% questionsList.forEach((question, index) => { %>
+                    <div class="question-card">
+                        <div class="question-header">
+                            <div class="question-number"><%= index + 1 %></div>
+                        </div>
+
+                        <div class="question-text">
+                            <i class="fas fa-question-circle" style="color: #3b82f6;"></i> <%= question.question %>
+                        </div>
+
+                        <div class="options-container">
+                            <h6 class="font-weight-bold mb-3" style="color: #475569;">
+                                <i class="fas fa-list-ul"></i> Options:
+                            </h6>
+                            <% question.options.forEach((option) => { %>
+                                <div class="option-item <%= option.optionName === question.correctAnswer ? 'correct' : '' %>">
+                                    <span class="option-label <%= option.optionName === question.correctAnswer ? 'correct-label' : '' %>">
+                                        <%= option.optionName %>:
+                                    </span>
+                                    <span><%= option.description %></span>
+                                    <% if (option.optionName === question.correctAnswer) { %>
+                                        <span class="correct-answer-badge">
+                                            <i class="fas fa-check"></i> Correct Answer
+                                        </span>
+                                    <% } %>
+                                </div>
+                            <% }) %>
+                        </div>
+
+                        <div class="explanation-box">
+                            <div class="explanation-title">
+                                <i class="fas fa-lightbulb"></i> Explanation:
+                            </div>
+                            <div style="color: #856404;"><%= question.correctOptionDescription %></div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <a href="/question/edit/<%= question._id %>" class="btn btn-info">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <form method="POST" action="/question/delete/<%= question._id %>" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this question?');">
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</body>
+</html>
+

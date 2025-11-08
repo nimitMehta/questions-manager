@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questions Manager</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .page-title {
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .add-form-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-control, .form-control:focus {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 12px 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
+        }
+
+        .btn {
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            min-height: 44px; /* Touch-friendly size */
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-success {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+
+        .btn-info {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #475569;
+            transform: translateY(-2px);
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            color: white;
+        }
+
+        .btn-primary {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0284c7;
+            transform: translateY(-2px);
+            color: white;
+        }
+
+        .papers-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .paper-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+            transition: all 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .paper-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .paper-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .paper-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+
+        .paper-year {
+            font-size: 16px;
+            color: #64748b;
+        }
+
+        .question-count-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .paper-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .paper-actions .btn {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #cbd5e1;
+        }
+
+        @media only screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header-card {
+                padding: 20px;
+            }
+
+            .header-card .d-flex {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+
+            .header-card .page-title {
+                font-size: 24px;
+                margin-bottom: 15px;
+            }
+
+            .header-card form {
+                width: 100%;
+            }
+
+            .header-card .btn-danger {
+                width: 100%;
+            }
+
+            .add-form-card {
+                padding: 20px;
+            }
+
+            .papers-container {
+                padding: 20px;
+            }
+
+            .paper-card {
+                padding: 20px;
+            }
+
+            .paper-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .paper-name {
+                font-size: 20px;
+            }
+
+            .paper-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .paper-actions .btn {
+                width: 100%;
+                min-width: 100%;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+        }
+
+        @media only screen and (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .main-container {
+                max-width: 100%;
+            }
+
+            .header-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .page-title {
+                font-size: 18px;
+            }
+
+            .add-form-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .papers-container {
+                padding: 15px;
+            }
+
+            .paper-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .paper-name {
+                font-size: 18px;
+            }
+
+            .paper-year {
+                font-size: 14px;
+            }
+
+            .question-count-badge {
+                font-size: 12px;
+                padding: 6px 12px;
+                margin-top: 10px;
+            }
+
+            .section-title {
+                font-size: 18px;
+            }
+
+            .btn {
+                min-height: 48px; /* Larger touch target on small screens */
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+
+            .form-control {
+                min-height: 48px; /* Touch-friendly input size */
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 12px;
+            }
+
+            .paper-actions {
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <h1 class="page-title mb-0">
+                    <i class="fas fa-question-circle"></i> Questions Manager
+                </h1>
+                <form method="POST" action="/logout" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+                </form>
+            </div>
+            <p class="text-center text-muted mb-0">
+                Welcome, <strong><%= username || 'User' %></strong>! Manage your question papers efficiently
+            </p>
+        </div>
+
+        <!-- Add New Paper Form -->
+        <div class="add-form-card">
+            <h3 class="text-center mb-4" style="color: #0f172a; font-weight: 700;">
+                <i class="fas fa-plus-circle"></i> Create New Paper
+            </h3>
+            <form action="/question/start" method="POST">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="mb-2 font-weight-bold" style="color: #0f172a;">
+                            <i class="fas fa-file-alt"></i> Paper Name
+                        </label>
+                        <input type="text" class="form-control" name="paperName" placeholder="Enter paper name" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="mb-2 font-weight-bold" style="color: #0f172a;">
+                            <i class="fas fa-calendar"></i> Year
+                        </label>
+                        <input type="text" class="form-control" name="year" placeholder="Enter year" required>
+                    </div>
+                </div>
+                <div class="text-center mt-4">
+                    <button class="btn btn-success btn-lg" type="submit">
+                        <i class="fas fa-plus"></i> Create Paper & Start Adding Questions
+                    </button>
+            </div>
+            </form>
+        </div>
+
+        <!-- Papers List -->
+        <div class="papers-container">
+            <h2 class="section-title">
+                <i class="fas fa-list"></i> Question Papers 
+                <span class="badge badge-primary" style="background: #3b82f6;"><%= papersList.length %></span>
+            </h2>
+
+            <% if (papersList.length === 0) { %>
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h4>No papers yet</h4>
+                    <p>Start by creating your first paper using the form above!</p>
+                </div>
+            <% } else { %>
+                <% papersList.forEach((paper) => { %>
+                    <div class="paper-card">
+                        <div class="paper-header">
+                            <div>
+                                <div class="paper-name">
+                                    <i class="fas fa-file-alt" style="color: #3b82f6;"></i> <%= paper.paperName %>
+                                </div>
+                                <div class="paper-year">
+                                    <i class="fas fa-calendar"></i> Year: <%= paper.year %>
+                                </div>
+                            </div>
+                            <div class="question-count-badge">
+                                <i class="fas fa-question-circle"></i> <%= paper.questionCount %> Question<%= paper.questionCount !== 1 ? 's' : '' %>
+                            </div>
+                        </div>
+                        <div class="paper-actions">
+                            <a href="/paper/<%= encodeURIComponent(paper.paperName) %>/<%= encodeURIComponent(paper.year) %>" class="btn btn-primary">
+                                <i class="fas fa-eye"></i> View Questions
+                            </a>
+                            <a href="/question/add?paperName=<%= encodeURIComponent(paper.paperName) %>&year=<%= encodeURIComponent(paper.year) %>" class="btn btn-info">
+                                <i class="fas fa-plus"></i> Add More Questions
+                            </a>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</body>
+</html>

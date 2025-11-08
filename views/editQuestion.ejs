@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+
+        .main-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 40px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .page-title {
+            color: #0f172a;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .form-control, .form-control:focus {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 12px 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
+        }
+
+        select.form-control {
+            width: 100%;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            padding-right: 40px;
+            cursor: pointer;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        select.form-control option {
+            padding: 12px 15px;
+            white-space: normal;
+            word-wrap: break-word;
+            min-height: 44px;
+            display: block;
+            width: 100%;
+        }
+
+        /* Ensure dropdown menu is wide enough */
+        select.form-control:focus {
+            outline: none;
+        }
+
+        /* For better mobile dropdown display */
+        @supports (-webkit-appearance: none) {
+            select.form-control {
+                background-size: 12px;
+            }
+        }
+
+        .selected-option-preview {
+            margin-top: 12px;
+            padding: 12px 15px;
+            background: #eff6ff;
+            border: 1px solid #3b82f6;
+            border-left: 4px solid #3b82f6;
+            border-radius: 8px;
+            color: #1e40af;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .selected-option-preview strong {
+            color: #1e3a8a;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .selected-option-preview span {
+            color: #0f172a;
+            font-weight: 500;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .option-group {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .option-group:hover {
+            border-color: #3b82f6;
+        }
+
+        .btn {
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            min-height: 44px; /* Touch-friendly size */
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .section-title {
+            color: #0f172a;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        @media only screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .main-container {
+                max-width: 100%;
+            }
+
+            .form-card {
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+
+            .header-section {
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .section-title {
+                font-size: 20px;
+            }
+
+            .option-group {
+                padding: 15px;
+                margin-bottom: 12px;
+            }
+
+            .form-control {
+                font-size: 16px;
+            }
+
+            select.form-control {
+                font-size: 16px;
+                min-height: 48px;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                min-height: 48px;
+            }
+
+            .d-flex.justify-content-center .btn {
+                width: 100%;
+            }
+
+            .row {
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            .row .col-md-6 {
+                padding-left: 0;
+                padding-right: 0;
+                margin-bottom: 15px;
+            }
+        }
+
+        @media only screen and (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .form-card {
+                padding: 15px;
+            }
+
+            .header-section {
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+            }
+
+            .page-title {
+                font-size: 18px;
+            }
+
+            .section-title {
+                font-size: 18px;
+            }
+
+            .form-control {
+                font-size: 16px; /* Prevents zoom on iOS */
+                min-height: 48px; /* Touch-friendly input size */
+                padding: 12px;
+            }
+
+            textarea.form-control {
+                font-size: 16px;
+                min-height: 100px;
+            }
+
+            select.form-control {
+                font-size: 16px;
+                min-height: 48px;
+                padding: 12px 35px 12px 12px;
+            }
+
+            .option-group {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .form-label {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            .btn {
+                min-height: 48px; /* Larger touch target on small screens */
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="form-card">
+            <a href="/" class="btn btn-info mb-4">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            
+            <div class="header-section">
+                <h1 class="page-title">
+                    <i class="fas fa-edit"></i> Edit Question
+                </h1>
+            </div>
+
+            <form action="/question/edit/<%= question._id %>" method="POST">
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-question-circle"></i> Question
+                    </label>
+                    <textarea class="form-control" name="question" rows="4" required><%= question.question %></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-list-ul"></i> Options
+                    </label>
+                    <% 
+                        const optionMap = {};
+                        question.options.forEach(opt => {
+                            optionMap[opt.optionName] = opt.description;
+                        });
+                    %>
+                    <div class="option-group">
+                        <label class="form-label">Option A</label>
+                        <input type="text" class="form-control" name="option0" value="<%= optionMap['option A'] || '' %>" required>
+                    </div>
+                    <div class="option-group">
+                        <label class="form-label">Option B</label>
+                        <input type="text" class="form-control" name="option1" value="<%= optionMap['option B'] || '' %>" required>
+                    </div>
+                    <div class="option-group">
+                        <label class="form-label">Option C</label>
+                        <input type="text" class="form-control" name="option2" value="<%= optionMap['option C'] || '' %>" required>
+                    </div>
+                    <div class="option-group">
+                        <label class="form-label">Option D</label>
+                        <input type="text" class="form-control" name="option3" value="<%= optionMap['option D'] || '' %>" required>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-check-circle"></i> Correct Answer
+                    </label>
+                    <select class="form-control" name="correctAnswer" id="correctAnswer" required>
+                        <option value="">Select correct answer</option>
+                        <option value="option A" id="optA" <%= question.correctAnswer === 'option A' ? 'selected' : '' %>>Option A</option>
+                        <option value="option B" id="optB" <%= question.correctAnswer === 'option B' ? 'selected' : '' %>>Option B</option>
+                        <option value="option C" id="optC" <%= question.correctAnswer === 'option C' ? 'selected' : '' %>>Option C</option>
+                        <option value="option D" id="optD" <%= question.correctAnswer === 'option D' ? 'selected' : '' %>>Option D</option>
+                    </select>
+                    <div id="selectedOptionText" class="selected-option-preview" style="display: none;">
+                        <strong>Selected:</strong> <span id="selectedOptionContent"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-lightbulb"></i> Description for Correct Option
+                    </label>
+                    <textarea class="form-control" name="correctOptionDescription" rows="3" required><%= question.correctOptionDescription %></textarea>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="fas fa-file-alt"></i> Paper Name
+                        </label>
+                        <input type="text" class="form-control" name="paperName" value="<%= question.paperName %>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="fas fa-calendar"></i> Year
+                        </label>
+                        <input type="text" class="form-control" name="year" value="<%= question.year %>" required>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-center mt-5">
+                    <button class="btn btn-primary btn-lg" type="submit">
+                        <i class="fas fa-save"></i> Update Question
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script>
+        // Update dropdown to show full option text
+        document.addEventListener('DOMContentLoaded', function() {
+            const correctAnswerSelect = document.getElementById('correctAnswer');
+            const selectedOptionText = document.getElementById('selectedOptionText');
+            const optionInputs = {
+                'option A': { input: document.querySelector('input[name="option0"]'), option: document.getElementById('optA') },
+                'option B': { input: document.querySelector('input[name="option1"]'), option: document.getElementById('optB') },
+                'option C': { input: document.querySelector('input[name="option2"]'), option: document.getElementById('optC') },
+                'option D': { input: document.querySelector('input[name="option3"]'), option: document.getElementById('optD') }
+            };
+
+            function updateDropdownOptions() {
+                // Update each option text in the dropdown to show the description
+                Object.keys(optionInputs).forEach(key => {
+                    const opt = optionInputs[key];
+                    if (opt.input && opt.option) {
+                        const text = opt.input.value.trim();
+                        if (text) {
+                            // Show full text in dropdown option (truncate if too long for display)
+                            const displayText = text.length > 50 ? text.substring(0, 47) + '...' : text;
+                            opt.option.textContent = key + ': ' + displayText;
+                            opt.option.title = key + ': ' + text; // Full text on hover
+                        } else {
+                            opt.option.textContent = key;
+                            opt.option.title = '';
+                        }
+                    }
+                });
+            }
+
+            function updatePreview() {
+                const selectedValue = correctAnswerSelect.value;
+                const selectedOptionContent = document.getElementById('selectedOptionContent');
+                if (selectedValue && optionInputs[selectedValue]) {
+                    const optionText = optionInputs[selectedValue].input.value.trim();
+                    if (optionText) {
+                        selectedOptionContent.textContent = selectedValue + ': ' + optionText;
+                        selectedOptionText.style.display = 'block';
+                    } else {
+                        selectedOptionText.style.display = 'none';
+                    }
+                } else {
+                    selectedOptionText.style.display = 'none';
+                }
+            }
+
+            // Update dropdown options when inputs change
+            Object.keys(optionInputs).forEach(key => {
+                const opt = optionInputs[key];
+                if (opt.input) {
+                    opt.input.addEventListener('input', function() {
+                        updateDropdownOptions();
+                        updatePreview();
+                    });
+                }
+            });
+
+            // Update preview when dropdown changes
+            correctAnswerSelect.addEventListener('change', updatePreview);
+
+            // Initial updates
+            updateDropdownOptions();
+            updatePreview();
+        });
+    </script>
+</body>
+</html>

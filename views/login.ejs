@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Questions Manager</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 40px;
+            animation: slideIn 0.5s ease-out;
+            border: 1px solid #e2e8f0;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-icon {
+            width: 80px;
+            height: 80px;
+            background: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 36px;
+        }
+
+        .login-title {
+            color: #0f172a;
+            font-weight: 700;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .form-control, .form-control:focus {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 12px 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            z-index: 10;
+        }
+
+        .input-group .form-control {
+            padding-left: 45px;
+        }
+
+        .btn-login {
+            background: #3b82f6;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            color: white;
+            width: 100%;
+            transition: all 0.3s;
+            margin-top: 10px;
+            min-height: 48px; /* Touch-friendly size */
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-login:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        @media only screen and (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .login-container {
+                max-width: 100%;
+            }
+
+            .login-card {
+                padding: 30px 25px;
+            }
+
+            .login-icon {
+                width: 70px;
+                height: 70px;
+                font-size: 32px;
+            }
+
+            .login-title {
+                font-size: 24px;
+            }
+        }
+
+        @media only screen and (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .login-card {
+                padding: 25px 20px;
+            }
+
+            .login-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 28px;
+            }
+
+            .login-title {
+                font-size: 22px;
+            }
+
+            .login-subtitle {
+                font-size: 13px;
+            }
+
+            .form-control {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h1 class="login-title">Questions Manager</h1>
+                <p class="login-subtitle">Please login to continue</p>
+            </div>
+
+            <% if (error) { %>
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> <%= error %>
+                </div>
+            <% } %>
+
+            <form action="/login" method="POST">
+                <div class="input-group">
+                    <i class="fas fa-user input-icon"></i>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        name="username" 
+                        placeholder="Username" 
+                        required 
+                        autofocus
+                    >
+                </div>
+
+                <div class="input-group">
+                    <i class="fas fa-key input-icon"></i>
+                    <input 
+                        type="password" 
+                        class="form-control" 
+                        name="password" 
+                        placeholder="Password" 
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</body>
+</html>
+
