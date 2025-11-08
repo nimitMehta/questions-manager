@@ -5,7 +5,90 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 
 const app = express();
-const url = process.env.MONGODB_URI || `mongodb+srv://Bapubaby:JhanviKotak2009@fastners.e3aqj.mongodb.net/question-fillers?retryWrites=true&w=majority`;
+
+// Helper function to properly encode MongoDB connection string
+function encodeMongoURI(uri) {
+    try {
+        // For mongodb+srv:// URLs, manually parse and encode credentials
+        if (uri.startsWith('mongodb+srv://')) {
+            // Extract the part after mongodb+srv://
+            const afterProtocol = uri.substring(14); // 'mongodb+srv://'.length = 14
+            const atIndex = afterProtocol.indexOf('@');
+            
+            if (atIndex === -1) {
+                // No credentials, return as-is
+                return uri;
+            }
+            
+            // Split credentials and rest of URL
+            const credentials = afterProtocol.substring(0, atIndex);
+            const rest = afterProtocol.substring(atIndex + 1);
+            
+            // Split username and password
+            const colonIndex = credentials.indexOf(':');
+            if (colonIndex === -1) {
+                // Only username, no password
+                const encodedUsername = encodeURIComponent(credentials);
+                return `mongodb+srv://${encodedUsername}@${rest}`;
+            }
+            
+            const username = credentials.substring(0, colonIndex);
+            const password = credentials.substring(colonIndex + 1);
+            
+            // Encode username and password
+            const encodedUsername = encodeURIComponent(username);
+            const encodedPassword = encodeURIComponent(password);
+            
+            return `mongodb+srv://${encodedUsername}:${encodedPassword}@${rest}`;
+        } else if (uri.startsWith('mongodb://')) {
+            // For standard mongodb:// URLs, try using URL constructor
+            // Replace mongodb:// with http:// temporarily for parsing
+            const tempUri = uri.replace('mongodb://', 'http://');
+            try {
+                const url = new URL(tempUri);
+                const encodedUsername = encodeURIComponent(url.username || '');
+                const encodedPassword = encodeURIComponent(url.password || '');
+                const auth = encodedUsername && encodedPassword 
+                    ? `${encodedUsername}:${encodedPassword}@` 
+                    : encodedUsername ? `${encodedUsername}@` : '';
+                return `mongodb://${auth}${url.hostname}${url.port ? ':' + url.port : ''}${url.pathname}${url.search}`;
+            } catch (e) {
+                // If URL parsing fails, manually parse
+                const afterProtocol = uri.substring(10); // 'mongodb://'.length = 10
+                const atIndex = afterProtocol.indexOf('@');
+                
+                if (atIndex === -1) {
+                    return uri;
+                }
+                
+                const credentials = afterProtocol.substring(0, atIndex);
+                const rest = afterProtocol.substring(atIndex + 1);
+                
+                const colonIndex = credentials.indexOf(':');
+                if (colonIndex === -1) {
+                    const encodedUsername = encodeURIComponent(credentials);
+                    return `mongodb://${encodedUsername}@${rest}`;
+                }
+                
+                const username = credentials.substring(0, colonIndex);
+                const password = credentials.substring(colonIndex + 1);
+                const encodedUsername = encodeURIComponent(username);
+                const encodedPassword = encodeURIComponent(password);
+                
+                return `mongodb://${encodedUsername}:${encodedPassword}@${rest}`;
+            }
+        }
+        return uri;
+    } catch (error) {
+        // If parsing fails, return original URI
+        console.warn('Warning: Could not parse MongoDB URI, using as-is:', error.message);
+        return uri;
+    }
+}
+
+const rawUrl = process.env.MONGODB_URI || `mongodb+srv://Bapubaby:JhanviKotak2009@fastners.e3aqj.mongodb.net/question-fillers?retryWrites=true&w=majority`;
+const url = encodeMongoURI(rawUrl);
+
 mongoose.connect(url, {
     useNewUrlParser: true,
     useCreateIndex: true,
