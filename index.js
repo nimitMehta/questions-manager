@@ -4,6 +4,28 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const session = require('express-session');
 
+// Suppress the specific DEP0170 deprecation warning for MongoDB connection strings
+// This warning occurs because MongoDB replica set URLs contain multiple hosts,
+// which is valid for MongoDB but triggers Node.js URL parser warnings
+const originalEmitWarning = process.emitWarning;
+process.emitWarning = function(warning, type, code, ...args) {
+    // Check if this is the DEP0170 warning about MongoDB URLs
+    const warningStr = typeof warning === 'string' ? warning : (warning?.message || String(warning));
+    const isMongoDBDeprecation = 
+        code === 'DEP0170' || 
+        (warningStr && warningStr.includes('DEP0170') && warningStr.includes('mongodb://')) ||
+        (warningStr && warningStr.includes('DEP0170') && warningStr.includes('invalid'));
+    
+    if (isMongoDBDeprecation) {
+        // Suppress this specific deprecation warning
+        return;
+    }
+    // For other warnings, use the original function
+    if (originalEmitWarning) {
+        return originalEmitWarning.apply(process, [warning, type, code, ...args]);
+    }
+};
+
 const app = express();
 
 // Helper function to properly encode MongoDB connection string
