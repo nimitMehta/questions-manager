@@ -125,11 +125,15 @@ mongoose.connect(url, {
 const AUTH_USERNAME = process.env.AUTH_USERNAME || 'admin';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'admin123';
 
-// Debug: Log if credentials are loaded (only in development)
-if (process.env.NODE_ENV !== 'production') {
-    console.log('Auth Username loaded:', AUTH_USERNAME ? 'Yes' : 'No');
-    console.log('Auth Password loaded:', AUTH_PASSWORD ? 'Yes' : 'No');
-}
+// Log credential status (production-safe - doesn't expose actual values)
+console.log('=== Authentication Configuration ===');
+console.log('AUTH_USERNAME from env:', process.env.AUTH_USERNAME ? 'SET' : 'NOT SET (using default)');
+console.log('AUTH_PASSWORD from env:', process.env.AUTH_PASSWORD ? 'SET' : 'NOT SET (using default)');
+console.log('AUTH_USERNAME value length:', AUTH_USERNAME ? AUTH_USERNAME.length : 0, 'characters');
+console.log('AUTH_PASSWORD value length:', AUTH_PASSWORD ? AUTH_PASSWORD.length : 0, 'characters');
+console.log('AUTH_USERNAME first char:', AUTH_USERNAME ? AUTH_USERNAME.charAt(0) : 'N/A');
+console.log('AUTH_PASSWORD first char:', AUTH_PASSWORD ? AUTH_PASSWORD.charAt(0) : 'N/A');
+console.log('===================================');
 
 // Options schema for nested documents
 const optionSchema = new mongoose.Schema({
@@ -155,15 +159,34 @@ const Question = mongoose.model(
 app.use(require('express-status-monitor')());
 
 // Session configuration
-app.use(session({
+// Note: On Render, secure cookies work with HTTPS. If you're behind a proxy, 
+// you may need to set trust proxy: app.set('trust proxy', 1)
+const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-in-production',
     resave: false,
     saveUninitialized: false,
     cookie: { 
         secure: process.env.NODE_ENV === 'production', // Set to true if using HTTPS
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        httpOnly: true, // Prevents client-side JavaScript from accessing the cookie
+        sameSite: 'lax' // CSRF protection
     }
-}));
+};
+
+// Log session configuration (production-safe)
+console.log('=== Session Configuration ===');
+console.log('SESSION_SECRET from env:', process.env.SESSION_SECRET ? 'SET' : 'NOT SET (using default)');
+console.log('Cookie secure flag:', sessionConfig.cookie.secure);
+console.log('NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('============================');
+
+app.use(session(sessionConfig));
+
+// Trust proxy for secure cookies behind reverse proxy (Render uses this)
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+    console.log('Trust proxy enabled for production');
+}
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -179,6 +202,20 @@ const requireAuth = (req, res, next) => {
     }
 };
 
+// Debug endpoint to check auth configuration (production-safe)
+app.get('/debug/auth', (req, res) => {
+    res.json({
+        authUsernameSet: !!process.env.AUTH_USERNAME,
+        authPasswordSet: !!process.env.AUTH_PASSWORD,
+        authUsernameLength: AUTH_USERNAME ? AUTH_USERNAME.length : 0,
+        authPasswordLength: AUTH_PASSWORD ? AUTH_PASSWORD.length : 0,
+        sessionSecretSet: !!process.env.SESSION_SECRET,
+        nodeEnv: process.env.NODE_ENV || 'not set',
+        cookieSecure: sessionConfig.cookie.secure,
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Login routes
 app.get('/login', (req, res) => {
     if (req.session && req.session.authenticated) {
@@ -190,20 +227,38 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     
-    // Debug logging (only in development)
-    if (process.env.NODE_ENV !== 'production') {
-        console.log('Login attempt - Username received:', username);
-        console.log('Login attempt - Password received:', password ? '***' : 'empty');
-        console.log('Expected username:', AUTH_USERNAME);
-        console.log('Username match:', username === AUTH_USERNAME);
-        console.log('Password match:', password === AUTH_PASSWORD);
+    // Production-safe debug logging
+    console.log('=== Login Attempt ===');
+    console.log('Username received length:', username ? username.length : 0);
+    console.log('Password received length:', password ? password.length : 0);
+    console.log('Expected username length:', AUTH_USERNAME ? AUTH_USERNAME.length : 0);
+    console.log('Expected password length:', AUTH_PASSWORD ? AUTH_PASSWORD.length : 0);
+    console.log('Username exact match:', username === AUTH_USERNAME);
+    console.log('Password exact match:', password === AUTH_PASSWORD);
+    console.log('Username trimmed match:', username && username.trim() === AUTH_USERNAME);
+    console.log('Password trimmed match:', password && password.trim() === AUTH_PASSWORD);
+    
+    // Check for whitespace issues
+    if (username && username !== username.trim()) {
+        console.log('WARNING: Username has leading/trailing whitespace!');
+    }
+    if (password && password !== password.trim()) {
+        console.log('WARNING: Password has leading/trailing whitespace!');
     }
     
-    if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+    // Trim inputs for comparison
+    const trimmedUsername = username ? username.trim() : '';
+    const trimmedPassword = password ? password.trim() : '';
+    
+    if (trimmedUsername === AUTH_USERNAME && trimmedPassword === AUTH_PASSWORD) {
         req.session.authenticated = true;
-        req.session.username = username;
+        req.session.username = trimmedUsername;
+        console.log('Login SUCCESS');
+        console.log('================');
         return res.redirect('/');
     } else {
+        console.log('Login FAILED');
+        console.log('================');
         return res.render('login', { error: 'Invalid username or password' });
     }
 });
