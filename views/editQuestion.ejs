@@ -125,6 +125,104 @@
             resize: vertical;
         }
 
+        .image-upload-container {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .image-upload-input {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .image-upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .image-upload-label:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+
+        .image-upload-label i {
+            font-size: 48px;
+            color: #3b82f6;
+            margin-bottom: 12px;
+        }
+
+        .image-upload-label span {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .image-upload-label small {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .image-preview.active {
+            display: block;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid #e2e8f0;
+        }
+
+        .image-preview-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-remove-image {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-remove-image:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .existing-image-container {
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
         .form-label {
             font-weight: 600;
             color: #0f172a;
@@ -326,12 +424,38 @@
                 </h1>
             </div>
 
-            <form action="/question/edit/<%= question._id %>" method="POST">
+            <form action="/question/edit/<%= question._id %>" method="POST" enctype="multipart/form-data">
                 <div class="mb-4">
                     <label class="form-label">
                         <i class="fas fa-question-circle"></i> Question
                     </label>
-                    <textarea class="form-control" name="question" rows="4" required><%= question.question %></textarea>
+                    <textarea class="form-control" name="question" id="question" rows="4"><%= question.question %></textarea>
+                    
+                    <div class="mt-3">
+                        <label class="form-label" style="font-size: 14px; color: #64748b;">
+                            <i class="fas fa-image"></i> Question Image
+                        </label>
+                        <% if (question.questionImage) { %>
+                            <div class="existing-image-container" style="margin-bottom: 15px;">
+                                <img src="<%= question.questionImage %>" alt="Current question image" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid #e2e8f0;">
+                                <div style="margin-top: 10px;">
+                                    <label style="display: inline-flex; align-items: center; cursor: pointer; color: #ef4444; font-size: 13px;">
+                                        <input type="checkbox" name="deleteQuestionImage" value="true" style="margin-right: 6px;">
+                                        <i class="fas fa-trash"></i> Delete current image
+                                    </label>
+                                </div>
+                            </div>
+                        <% } %>
+                        <div class="image-upload-container">
+                            <input type="file" name="questionImage" id="questionImage" accept="image/*" class="image-upload-input" onchange="previewImage(this, 'questionPreview')">
+                            <label for="questionImage" class="image-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span><%= question.questionImage ? 'Replace Image' : 'Upload Question Image' %></span>
+                                <small>PNG, JPG, GIF up to 10MB</small>
+                            </label>
+                            <div id="questionPreview" class="image-preview"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -382,7 +506,33 @@
                     <label class="form-label">
                         <i class="fas fa-lightbulb"></i> Description for Correct Option
                     </label>
-                    <textarea class="form-control" name="correctOptionDescription" rows="3" required><%= question.correctOptionDescription %></textarea>
+                    <textarea class="form-control" name="correctOptionDescription" id="explanation" rows="3"><%= question.correctOptionDescription %></textarea>
+                    
+                    <div class="mt-3">
+                        <label class="form-label" style="font-size: 14px; color: #64748b;">
+                            <i class="fas fa-image"></i> Explanation Image
+                        </label>
+                        <% if (question.explanationImage) { %>
+                            <div class="existing-image-container" style="margin-bottom: 15px;">
+                                <img src="<%= question.explanationImage %>" alt="Current explanation image" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid #e2e8f0;">
+                                <div style="margin-top: 10px;">
+                                    <label style="display: inline-flex; align-items: center; cursor: pointer; color: #ef4444; font-size: 13px;">
+                                        <input type="checkbox" name="deleteExplanationImage" value="true" style="margin-right: 6px;">
+                                        <i class="fas fa-trash"></i> Delete current image
+                                    </label>
+                                </div>
+                            </div>
+                        <% } %>
+                        <div class="image-upload-container">
+                            <input type="file" name="explanationImage" id="explanationImage" accept="image/*" class="image-upload-input" onchange="previewImage(this, 'explanationPreview')">
+                            <label for="explanationImage" class="image-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span><%= question.explanationImage ? 'Replace Image' : 'Upload Explanation Image' %></span>
+                                <small>PNG, JPG, GIF up to 10MB</small>
+                            </label>
+                            <div id="explanationPreview" class="image-preview"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row mb-4">
@@ -477,6 +627,34 @@
             updateDropdownOptions();
             updatePreview();
         });
+
+        // Image preview functionality
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <div class="image-preview-actions">
+                            <button type="button" class="btn-remove-image" onclick="removeImage('${input.id}', '${previewId}')">
+                                <i class="fas fa-times"></i> Remove Image
+                            </button>
+                        </div>
+                    `;
+                    preview.classList.add('active');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeImage(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            input.value = '';
+            preview.innerHTML = '';
+            preview.classList.remove('active');
+        }
     </script>
 </body>
 </html>

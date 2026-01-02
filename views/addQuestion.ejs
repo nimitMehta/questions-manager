@@ -135,6 +135,102 @@
             resize: vertical;
         }
 
+        .image-upload-container {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .image-upload-input {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .image-upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .image-upload-label:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+
+        .image-upload-label i {
+            font-size: 48px;
+            color: #3b82f6;
+            margin-bottom: 12px;
+        }
+
+        .image-upload-label span {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .image-upload-label small {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .image-preview {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .image-preview.active {
+            display: block;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid #e2e8f0;
+        }
+
+        .image-preview-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-remove-image {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-remove-image:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+
         .form-label {
             font-weight: 600;
             color: #0f172a;
@@ -353,7 +449,7 @@
                 <i class="fas fa-plus-circle"></i> Add New Question
             </h3>
 
-            <form action="/question/add" method="POST">
+            <form action="/question/add" method="POST" enctype="multipart/form-data">
                 <!-- Hidden fields to preserve paper name and year -->
                 <input type="hidden" name="paperName" value="<%= paperName %>">
                 <input type="hidden" name="year" value="<%= year %>">
@@ -362,7 +458,25 @@
                     <label class="form-label">
                         <i class="fas fa-question-circle"></i> Question
                     </label>
-                    <textarea class="form-control" name="question" rows="4" placeholder="Enter your question here..." required></textarea>
+                    <div class="alert alert-info" style="background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 12px; margin-bottom: 15px; border-radius: 6px;">
+                        <i class="fas fa-info-circle"></i> <strong>Tip:</strong> You can add text, upload an image, or both! If text is empty, only the image will be displayed.
+                    </div>
+                    <textarea class="form-control" name="question" id="question" rows="4" placeholder="Enter your question here (optional - you can also upload an image below)"></textarea>
+                    
+                    <div class="mt-3">
+                        <label class="form-label" style="font-size: 14px; color: #64748b;">
+                            <i class="fas fa-image"></i> Or Upload Question Image
+                        </label>
+                        <div class="image-upload-container">
+                            <input type="file" name="questionImage" id="questionImage" accept="image/*" class="image-upload-input" onchange="previewImage(this, 'questionPreview')">
+                            <label for="questionImage" class="image-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Choose Image or Drag & Drop</span>
+                                <small>PNG, JPG, GIF up to 10MB</small>
+                            </label>
+                            <div id="questionPreview" class="image-preview"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -407,7 +521,22 @@
                     <label class="form-label">
                         <i class="fas fa-lightbulb"></i> Description for Correct Option
                     </label>
-                    <textarea class="form-control" name="correctOptionDescription" rows="3" placeholder="Explain why this is the correct answer..." required></textarea>
+                    <textarea class="form-control" name="correctOptionDescription" id="explanation" rows="3" placeholder="Explain why this is the correct answer (optional - you can also upload an image below)"></textarea>
+                    
+                    <div class="mt-3">
+                        <label class="form-label" style="font-size: 14px; color: #64748b;">
+                            <i class="fas fa-image"></i> Or Upload Explanation Image
+                        </label>
+                        <div class="image-upload-container">
+                            <input type="file" name="explanationImage" id="explanationImage" accept="image/*" class="image-upload-input" onchange="previewImage(this, 'explanationPreview')">
+                            <label for="explanationImage" class="image-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Choose Image or Drag & Drop</span>
+                                <small>PNG, JPG, GIF up to 10MB</small>
+                            </label>
+                            <div id="explanationPreview" class="image-preview"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-center mt-5">
@@ -489,6 +618,47 @@
             // Initial updates
             updateDropdownOptions();
             updatePreview();
+        });
+
+        // Image preview functionality
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <div class="image-preview-actions">
+                            <button type="button" class="btn-remove-image" onclick="removeImage('${input.id}', '${previewId}')">
+                                <i class="fas fa-times"></i> Remove Image
+                            </button>
+                        </div>
+                    `;
+                    preview.classList.add('active');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeImage(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            input.value = '';
+            preview.innerHTML = '';
+            preview.classList.remove('active');
+        }
+
+        // Form validation before submit - allow both text and image
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const questionText = document.getElementById('question').value.trim();
+            const questionImage = document.getElementById('questionImage').files.length > 0;
+            
+            // At least one must be provided (text or image or both)
+            if (!questionText && !questionImage) {
+                e.preventDefault();
+                alert('Please provide question text, upload a question image, or both.');
+                return false;
+            }
         });
     </script>
 </body>

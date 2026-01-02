@@ -3,6 +3,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const session = require('express-session');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+const path = require('path');
+const fs = require('fs');
 
 // Suppress the specific DEP0170 deprecation warning for MongoDB connection strings
 // This warning occurs because MongoDB replica set URLs contain multiple hosts,
@@ -143,12 +148,14 @@ const optionSchema = new mongoose.Schema({
 
 // Questions schema
 const questionsSchema = new mongoose.Schema({
-    question: { type: String, required: true },
+    question: { type: String, required: false }, // Made optional to allow image-only questions
+    questionImage: { type: String, required: false }, // Path to question image
     options: { type: [optionSchema], required: true },
     correctAnswer: { type: String, required: true }, // e.g., "option C"
     paperName: { type: String, required: true },
     year: { type: String, required: true },
-    correctOptionDescription: { type: String, required: true }
+    correctOptionDescription: { type: String, required: false }, // Made optional to allow image-only explanations
+    explanationImage: { type: String, required: false } // Path to explanation image
 }, { timestamps: true });
 
 const Question = mongoose.model(
@@ -192,6 +199,95 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
 app.set('view engine','ejs');
+
+// Configure Cloudinary
+const cloudinaryConfig = {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+};
+
+// Validate and configure Cloudinary
+if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
+    console.warn('⚠️  WARNING: Cloudinary credentials not found in environment variables!');
+    console.warn('   Image uploads will fail. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your .env file');
+    console.warn('   See CLOUDINARY_SETUP.md for setup instructions.');
+    console.warn('   Current values:', {
+        cloud_name: cloudinaryConfig.cloud_name ? 'SET' : 'NOT SET',
+        api_key: cloudinaryConfig.api_key ? 'SET' : 'NOT SET',
+        api_secret: cloudinaryConfig.api_secret ? 'SET' : 'NOT SET'
+    });
+} else {
+    try {
+        // Configure Cloudinary with the credentials
+        cloudinary.config({
+            cloud_name: cloudinaryConfig.cloud_name,
+            api_key: cloudinaryConfig.api_key,
+            api_secret: cloudinaryConfig.api_secret
+        });
+        console.log('✅ Cloudinary configured successfully');
+        console.log('   Cloud Name:', cloudinaryConfig.cloud_name);
+    } catch (error) {
+        console.error('❌ Error configuring Cloudinary:', error.message);
+    }
+}
+
+// Helper function to extract public_id from Cloudinary URL
+function extractPublicIdFromUrl(url) {
+    if (!url) return null;
+    try {
+        // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{folder}/{filename}.{ext}
+        // We need: {folder}/{filename} (without extension)
+        const urlParts = url.split('/');
+        const uploadIndex = urlParts.findIndex(part => part === 'upload');
+        if (uploadIndex !== -1 && uploadIndex < urlParts.length - 1) {
+            // Get everything after 'upload' and before the last part (which is filename.ext)
+            const pathParts = urlParts.slice(uploadIndex + 1);
+            if (pathParts.length > 0) {
+                const lastPart = pathParts[pathParts.length - 1];
+                const filenameWithoutExt = lastPart.replace(/\.[^/.]+$/, '');
+                if (pathParts.length > 1) {
+                    // Has folder
+                    const folder = pathParts.slice(0, -1).join('/');
+                    return `${folder}/${filenameWithoutExt}`;
+                } else {
+                    return filenameWithoutExt;
+                }
+            }
+        }
+        // Fallback: try to extract from end of URL
+        const match = url.match(/\/([^\/]+)\/([^\/]+)\.(jpg|jpeg|png|gif|webp)$/i);
+        if (match) {
+            return `${match[1]}/${match[2]}`;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error extracting public_id:', error);
+        return null;
+    }
+}
+
+// Configure multer with memory storage (we'll upload to Cloudinary after)
+const storage = multer.memoryStorage();
+
+// File filter - only allow images
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb(new Error('Only image files are allowed! (jpeg, jpg, png, gif, webp)'));
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: fileFilter
+});
 
 // Authentication middleware
 const requireAuth = (req, res, next) => {
@@ -335,36 +431,132 @@ app.get('/question/add', requireAuth, (req, res) => {
 });
 
 // Post add question (protected)
-app.post('/question/add', requireAuth, async (req, res) => {
-    const { question, paperName, year, correctAnswer, correctOptionDescription } = req.body;
-    
-    // Build options array from form data
-    const options = [];
-    const optionNames = ['option A', 'option B', 'option C', 'option D'];
-    
-    for (let i = 0; i < optionNames.length; i++) {
-        const optionDesc = req.body[`option${i}`];
-        if (optionDesc && optionDesc.trim() !== '') {
-            options.push({
-                optionName: optionNames[i],
-                description: optionDesc
-            });
+app.post('/question/add', requireAuth, upload.fields([
+    { name: 'questionImage', maxCount: 1 },
+    { name: 'explanationImage', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const { question, paperName, year, correctAnswer, correctOptionDescription } = req.body;
+        
+        // Validate that either question text or question image is provided (or both)
+        if (!question && !req.files?.questionImage) {
+            return res.status(400).send('Please provide question text, question image, or both.');
         }
+        
+        // Build options array from form data
+        const options = [];
+        const optionNames = ['option A', 'option B', 'option C', 'option D'];
+        
+        for (let i = 0; i < optionNames.length; i++) {
+            const optionDesc = req.body[`option${i}`];
+            if (optionDesc && optionDesc.trim() !== '') {
+                options.push({
+                    optionName: optionNames[i],
+                    description: optionDesc
+                });
+            }
+        }
+        
+        // Upload images to Cloudinary if provided
+        let questionImageUrl = null;
+        let explanationImageUrl = null;
+        
+        // Check if Cloudinary is configured (re-check from env to be sure)
+        const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+        
+        if (req.files?.questionImage) {
+            if (!isCloudinaryConfigured) {
+                return res.status(500).send('Cloudinary is not configured. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your environment variables. See CLOUDINARY_SETUP.md for instructions.');
+            }
+            
+            // Ensure Cloudinary is configured before upload - always reconfigure to be safe
+            cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET
+            });
+            
+            try {
+                const result = await new Promise((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: 'questions-manager/questions',
+                            transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
+                    streamifier.createReadStream(req.files.questionImage[0].buffer).pipe(uploadStream);
+                });
+                questionImageUrl = result.secure_url;
+            } catch (error) {
+                console.error('Error uploading question image:', error);
+                return res.status(500).send('Error uploading question image: ' + error.message);
+            }
+        }
+        
+        if (req.files?.explanationImage) {
+            if (!isCloudinaryConfigured) {
+                return res.status(500).send('Cloudinary is not configured. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your environment variables. See CLOUDINARY_SETUP.md for instructions.');
+            }
+            
+            // Ensure Cloudinary is configured before upload - always reconfigure to be safe
+            cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET
+            });
+            
+            try {
+                const result = await new Promise((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: 'questions-manager/explanations',
+                            transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
+                    streamifier.createReadStream(req.files.explanationImage[0].buffer).pipe(uploadStream);
+                });
+                explanationImageUrl = result.secure_url;
+            } catch (error) {
+                console.error('Error uploading explanation image:', error);
+                return res.status(500).send('Error uploading explanation image: ' + error.message);
+            }
+        }
+        
+        // Debug logging
+        console.log('=== Saving Question to Database ===');
+        console.log('Question length:', question ? question.length : 0, 'characters');
+        console.log('Question image:', questionImageUrl || 'none');
+        console.log('Explanation image:', explanationImageUrl || 'none');
+        console.log('Options count:', options.length);
+        console.log('===================================');
+        
+        await Question.create({ 
+            question: question || '', 
+            questionImage: questionImageUrl,
+            options, 
+            correctAnswer, 
+            paperName, 
+            year, 
+            correctOptionDescription: correctOptionDescription || '',
+            explanationImage: explanationImageUrl
+        });
+        
+        // Redirect back to add page with same paper name and year to add more questions
+        const encodedPaperName = encodeURIComponent(paperName);
+        const encodedYear = encodeURIComponent(year);
+        res.redirect(`/question/add?paperName=${encodedPaperName}&year=${encodedYear}`);
+    } catch (error) {
+        console.error('Error saving question:', error);
+        res.status(500).send('Error saving question: ' + error.message);
     }
-    
-    await Question.create({ 
-        question, 
-        options, 
-        correctAnswer, 
-        paperName, 
-        year, 
-        correctOptionDescription 
-    });
-    
-    // Redirect back to add page with same paper name and year to add more questions
-    const encodedPaperName = encodeURIComponent(paperName);
-    const encodedYear = encodeURIComponent(year);
-    res.redirect(`/question/add?paperName=${encodedPaperName}&year=${encodedYear}`);
 });
 
 // Get edit question page (protected)
@@ -374,48 +566,208 @@ app.get('/question/edit/:questionId', requireAuth, async (req, res) => {
 });
 
 // Post edit question (protected)
-app.post('/question/edit/:questionId', requireAuth, async (req, res) => {
-    const { question, paperName, year, correctAnswer, correctOptionDescription } = req.body;
-    
-    // Build options array from form data
-    const options = [];
-    const optionNames = ['option A', 'option B', 'option C', 'option D'];
-    
-    for (let i = 0; i < optionNames.length; i++) {
-        const optionDesc = req.body[`option${i}`];
-        if (optionDesc && optionDesc.trim() !== '') {
-            options.push({
-                optionName: optionNames[i],
-                description: optionDesc
-            });
+app.post('/question/edit/:questionId', requireAuth, upload.fields([
+    { name: 'questionImage', maxCount: 1 },
+    { name: 'explanationImage', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const { question, paperName, year, correctAnswer, correctOptionDescription, deleteQuestionImage, deleteExplanationImage } = req.body;
+        
+        // Get existing question to check for old images
+        const existingQuestion = await Question.findById(req.params.questionId);
+        if (!existingQuestion) {
+            return res.status(404).send('Question not found');
         }
+        
+        // Build options array from form data
+        const options = [];
+        const optionNames = ['option A', 'option B', 'option C', 'option D'];
+        
+        for (let i = 0; i < optionNames.length; i++) {
+            const optionDesc = req.body[`option${i}`];
+            if (optionDesc && optionDesc.trim() !== '') {
+                options.push({
+                    optionName: optionNames[i],
+                    description: optionDesc
+                });
+            }
+        }
+        
+        // Handle image updates
+        let questionImageUrl = existingQuestion.questionImage;
+        let explanationImageUrl = existingQuestion.explanationImage;
+        
+        // Delete old images from Cloudinary if requested
+        if (deleteQuestionImage === 'true' && existingQuestion.questionImage) {
+            try {
+                const publicId = extractPublicIdFromUrl(existingQuestion.questionImage);
+                if (publicId) {
+                    await cloudinary.uploader.destroy(publicId);
+                }
+                questionImageUrl = null;
+            } catch (error) {
+                console.error('Error deleting question image from Cloudinary:', error);
+            }
+        }
+        
+        if (deleteExplanationImage === 'true' && existingQuestion.explanationImage) {
+            try {
+                const publicId = extractPublicIdFromUrl(existingQuestion.explanationImage);
+                if (publicId) {
+                    await cloudinary.uploader.destroy(publicId);
+                }
+                explanationImageUrl = null;
+            } catch (error) {
+                console.error('Error deleting explanation image from Cloudinary:', error);
+            }
+        }
+        
+        // Check if Cloudinary is configured (re-check from env to be sure)
+        const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+        
+        // Upload new images to Cloudinary if provided
+        if (req.files?.questionImage) {
+            if (!isCloudinaryConfigured) {
+                return res.status(500).send('Cloudinary is not configured. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your environment variables. See CLOUDINARY_SETUP.md for instructions.');
+            }
+            
+            // Ensure Cloudinary is configured before upload - always reconfigure to be safe
+            cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET
+            });
+            
+            try {
+                // Delete old image from Cloudinary if exists
+                if (existingQuestion.questionImage) {
+                    try {
+                        const publicId = extractPublicIdFromUrl(existingQuestion.questionImage);
+                        if (publicId) {
+                            await cloudinary.uploader.destroy(publicId);
+                        }
+                    } catch (error) {
+                        console.error('Error deleting old question image:', error);
+                    }
+                }
+                
+                // Upload new image
+                const result = await new Promise((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: 'questions-manager/questions',
+                            transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
+                    streamifier.createReadStream(req.files.questionImage[0].buffer).pipe(uploadStream);
+                });
+                questionImageUrl = result.secure_url;
+            } catch (error) {
+                console.error('Error uploading question image:', error);
+                return res.status(500).send('Error uploading question image: ' + error.message);
+            }
+        }
+        
+        if (req.files?.explanationImage) {
+            if (!isCloudinaryConfigured) {
+                return res.status(500).send('Cloudinary is not configured. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your environment variables. See CLOUDINARY_SETUP.md for instructions.');
+            }
+            
+            // Ensure Cloudinary is configured before upload - always reconfigure to be safe
+            cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET
+            });
+            
+            try {
+                // Delete old image from Cloudinary if exists
+                if (existingQuestion.explanationImage) {
+                    try {
+                        const publicId = extractPublicIdFromUrl(existingQuestion.explanationImage);
+                        if (publicId) {
+                            await cloudinary.uploader.destroy(publicId);
+                        }
+                    } catch (error) {
+                        console.error('Error deleting old explanation image:', error);
+                    }
+                }
+                
+                // Upload new image
+                const result = await new Promise((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: 'questions-manager/explanations',
+                            transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
+                    streamifier.createReadStream(req.files.explanationImage[0].buffer).pipe(uploadStream);
+                });
+                explanationImageUrl = result.secure_url;
+            } catch (error) {
+                console.error('Error uploading explanation image:', error);
+                return res.status(500).send('Error uploading explanation image: ' + error.message);
+            }
+        }
+        
+        await Question.findByIdAndUpdate(req.params.questionId, { 
+            question: question || '',
+            questionImage: questionImageUrl,
+            options, 
+            correctAnswer, 
+            paperName, 
+            year, 
+            correctOptionDescription: correctOptionDescription || '',
+            explanationImage: explanationImageUrl
+        });
+        
+        // Redirect back to the paper's questions page
+        const encodedPaperName = encodeURIComponent(paperName);
+        const encodedYear = encodeURIComponent(year);
+        res.redirect(`/paper/${encodedPaperName}/${encodedYear}`);
+    } catch (error) {
+        console.error('Error updating question:', error);
+        res.status(500).send('Error updating question: ' + error.message);
     }
-    
-    await Question.findByIdAndUpdate(req.params.questionId, { 
-        question, 
-        options, 
-        correctAnswer, 
-        paperName, 
-        year, 
-        correctOptionDescription 
-    });
-    
-    // Redirect back to the paper's questions page
-    const encodedPaperName = encodeURIComponent(paperName);
-    const encodedYear = encodeURIComponent(year);
-    res.redirect(`/paper/${encodedPaperName}/${encodedYear}`);
 });
 
 // Delete question (protected)
 app.post('/question/delete/:questionId', requireAuth, async (req, res) => {
-    const question = await Question.findById(req.params.questionId);
-    if (question) {
-        const encodedPaperName = encodeURIComponent(question.paperName);
-        const encodedYear = encodeURIComponent(question.year);
-        await Question.findByIdAndDelete(req.params.questionId);
-        res.redirect(`/paper/${encodedPaperName}/${encodedYear}`);
-    } else {
-        res.redirect('/');
+    try {
+        const question = await Question.findById(req.params.questionId);
+        if (question) {
+            // Delete associated images
+            if (question.questionImage) {
+                const questionImagePath = path.join(__dirname, question.questionImage);
+                if (fs.existsSync(questionImagePath)) {
+                    fs.unlinkSync(questionImagePath);
+                }
+            }
+            if (question.explanationImage) {
+                const explanationImagePath = path.join(__dirname, question.explanationImage);
+                if (fs.existsSync(explanationImagePath)) {
+                    fs.unlinkSync(explanationImagePath);
+                }
+            }
+            
+            const encodedPaperName = encodeURIComponent(question.paperName);
+            const encodedYear = encodeURIComponent(question.year);
+            await Question.findByIdAndDelete(req.params.questionId);
+            res.redirect(`/paper/${encodedPaperName}/${encodedYear}`);
+        } else {
+            res.redirect('/');
+        }
+    } catch (error) {
+        console.error('Error deleting question:', error);
+        res.status(500).send('Error deleting question: ' + error.message);
     }
 });
 

@@ -188,6 +188,39 @@
             margin-top: 15px;
         }
 
+        .question-image, .explanation-image {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 2px solid #e2e8f0;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .question-image:hover, .explanation-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .question-image-container, .explanation-image-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .question-image-container.no-margin {
+            margin-top: 0;
+        }
+
+        .explanation-text-with-image {
+            margin-bottom: 15px;
+        }
+
+        .explanation-text-no-image {
+            margin-bottom: 0;
+        }
+
         .explanation-title {
             font-weight: 700;
             color: #856404;
@@ -435,7 +468,15 @@
                         </div>
 
                         <div class="question-text">
-                            <i class="fas fa-question-circle" style="color: #3b82f6;"></i> <%= question.question %>
+                            <% if (question.question && question.question.trim() !== '') { %>
+                                <i class="fas fa-question-circle" style="color: #3b82f6;"></i> <%= question.question %>
+                            <% } %>
+                            <% if (question.questionImage) { %>
+                                <% const hasQuestionText = question.question && question.question.trim() !== ''; %>
+                                <div class="question-image-container <%= !hasQuestionText ? 'no-margin' : '' %>">
+                                    <img src="<%= question.questionImage %>" alt="Question" class="question-image">
+                                </div>
+                            <% } %>
                         </div>
 
                         <div class="options-container">
@@ -461,7 +502,15 @@
                             <div class="explanation-title">
                                 <i class="fas fa-lightbulb"></i> Explanation:
                             </div>
-                            <div style="color: #856404;"><%= question.correctOptionDescription %></div>
+                            <% if (question.correctOptionDescription && question.correctOptionDescription.trim() !== '') { %>
+                                <% const hasExplanationImage = question.explanationImage; %>
+                                <div class="<%= hasExplanationImage ? 'explanation-text-with-image' : 'explanation-text-no-image' %>" style="color: #856404;"><%= question.correctOptionDescription %></div>
+                            <% } %>
+                            <% if (question.explanationImage) { %>
+                                <div class="explanation-image-container">
+                                    <img src="<%= question.explanationImage %>" alt="Explanation" class="explanation-image">
+                                </div>
+                            <% } %>
                         </div>
 
                         <div class="action-buttons">
