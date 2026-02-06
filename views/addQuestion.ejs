@@ -548,7 +548,7 @@
                 </div>
 
                 <div class="d-flex justify-content-center mt-5">
-                    <button class="btn btn-primary btn-lg mr-3" type="submit">
+                    <button class="btn btn-primary btn-lg mr-3" type="submit" id="submitBtn">
                         <i class="fas fa-plus"></i> Add Question
                     </button>
                     <a href="/" class="btn btn-secondary btn-lg">
@@ -656,17 +656,25 @@
             preview.classList.remove('active');
         }
 
-        // Form validation before submit - allow both text and image
+        // Form validation and double-submit prevention
         document.querySelector('form').addEventListener('submit', function(e) {
             const questionText = document.getElementById('question').value.trim();
             const questionImage = document.getElementById('questionImage').files.length > 0;
             
-            // At least one must be provided (text or image or both)
             if (!questionText && !questionImage) {
                 e.preventDefault();
                 alert('Please provide question text, upload a question image, or both.');
                 return false;
             }
+            
+            // Prevent double submit: disable button and show loading state
+            var btn = document.getElementById('submitBtn');
+            if (btn && btn.disabled) {
+                e.preventDefault();
+                return false;
+            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
         });
     </script>
 </body>
