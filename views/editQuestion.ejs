@@ -427,6 +427,23 @@
             <form action="/question/edit/<%= question._id %>" method="POST" enctype="multipart/form-data">
                 <div class="mb-4">
                     <label class="form-label">
+                        <i class="fas fa-tags"></i> Subject, Topic & Chapter
+                    </label>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <input type="text" class="form-control" name="subjectName" placeholder="Subject name" value="<%= question.subjectName || '' %>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <input type="text" class="form-control" name="topicName" placeholder="Topic name" value="<%= question.topicName || '' %>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <input type="text" class="form-control" name="chapterNumber" placeholder="Chapter number" value="<%= question.chapterNumber || '' %>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">
                         <i class="fas fa-question-circle"></i> Question
                     </label>
                     <textarea class="form-control" name="question" id="question" rows="4"><%= question.question %></textarea>

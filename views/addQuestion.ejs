@@ -435,14 +435,20 @@
                 <i class="fas fa-arrow-left"></i> Back to Home
             </a>
             
-            <!-- Paper Name and Year Header -->
+            <!-- Paper or Subject/Topic/Chapter Header -->
             <div class="header-section">
-                <div class="paper-title">
-                    <i class="fas fa-file-alt"></i> <%= paperName %>
-                </div>
-                <div class="year-badge">
-                    <i class="fas fa-calendar"></i> Year: <%= year %>
-                </div>
+                <% if (typeof subjectName !== 'undefined' && (subjectName || topicName || chapterNumber)) { %>
+                    <div class="paper-title">
+                        <i class="fas fa-tags"></i> <%= subjectName || '—' %> / <%= topicName || '—' %> / Ch.<%= chapterNumber || '—' %>
+                    </div>
+                <% } else { %>
+                    <div class="paper-title">
+                        <i class="fas fa-file-alt"></i> <%= paperName %>
+                    </div>
+                    <div class="year-badge">
+                        <i class="fas fa-calendar"></i> Year: <%= year %>
+                    </div>
+                <% } %>
             </div>
             
             <h3 class="section-title mb-4">
@@ -450,9 +456,11 @@
             </h3>
 
             <form action="/question/add" method="POST" enctype="multipart/form-data">
-                <!-- Hidden fields to preserve paper name and year -->
                 <input type="hidden" name="paperName" value="<%= paperName %>">
                 <input type="hidden" name="year" value="<%= year %>">
+                <input type="hidden" name="subjectName" value="<%= subjectName %>">
+                <input type="hidden" name="topicName" value="<%= topicName %>">
+                <input type="hidden" name="chapterNumber" value="<%= chapterNumber %>">
 
                 <div class="mb-4">
                     <label class="form-label">

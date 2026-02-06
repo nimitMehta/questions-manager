@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= subjectName %> - Chapters</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <style>
+        body { min-height: 100vh; background: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+        .main-container { max-width: 1000px; margin: 0 auto; }
+        .header-card { background: white; border-radius: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 30px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
+        .btn { border-radius: 10px; padding: 12px 25px; font-weight: 600; transition: all 0.3s; border: none; min-height: 44px; cursor: pointer; }
+        .btn-info { background: #64748b; color: white; }
+        .btn-info:hover { background: #475569; transform: translateY(-2px); color: white; }
+        .btn-primary { background: #0ea5e9; color: white; }
+        .btn-primary:hover { background: #0284c7; transform: translateY(-2px); color: white; }
+        .btn-success { background: #3b82f6; color: white; }
+        .btn-success:hover { background: #2563eb; transform: translateY(-2px); color: white; }
+        .chapters-container { background: white; border-radius: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 30px; border: 1px solid #e2e8f0; }
+        .section-title { color: #0f172a; font-weight: 700; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
+        .chapter-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; border-left: 4px solid #0ea5e9; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; transition: all 0.3s; }
+        .chapter-card:hover { transform: translateX(5px); box-shadow: 0 5px 20px rgba(0,0,0,0.15); }
+        .chapter-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .chapter-name { font-size: 22px; font-weight: 700; color: #0f172a; }
+        .question-count-badge { background: #0ea5e9; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .chapter-actions { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+        .chapter-actions .btn { min-width: 150px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #64748b; }
+        .subject-title { font-size: 28px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <a href="/" class="btn btn-info"><i class="fas fa-arrow-left"></i> Back to Home</a>
+            </div>
+            <div class="text-center">
+                <div class="subject-title"><i class="fas fa-tags" style="color: #0ea5e9;"></i> <%= subjectName %></div>
+                <p class="text-muted mb-0">Select a chapter to view or add questions</p>
+            </div>
+        </div>
+
+        <div class="chapters-container">
+            <h2 class="section-title">
+                <i class="fas fa-folder-open"></i> Chapters
+                <span class="badge badge-primary" style="background: #0ea5e9;"><%= chaptersList.length %></span>
+            </h2>
+
+            <% if (chaptersList.length === 0) { %>
+                <div class="empty-state">
+                    <i class="fas fa-folder-open" style="font-size: 64px; color: #cbd5e1;"></i>
+                    <h4>No chapters yet</h4>
+                    <p>Add questions with this subject and a chapter number from the home page.</p>
+                    <a href="/question/add?paperName=By%20Topic&year=Unknown&subjectName=<%= encodeURIComponent(subjectName) %>" class="btn btn-success mt-3">
+                        <i class="fas fa-plus"></i> Add First Question
+                    </a>
+                </div>
+            <% } else { %>
+                <% chaptersList.forEach((ch) => { %>
+                    <div class="chapter-card">
+                        <div class="chapter-header">
+                            <div class="chapter-name">
+                                <i class="fas fa-book"></i> <%= ch.chapterNumber %>.<%= subjectName %>
+                            </div>
+                            <div class="question-count-badge">
+                                <i class="fas fa-question-circle"></i> <%= ch.questionCount %> Question<%= ch.questionCount !== 1 ? 's' : '' %>
+                            </div>
+                        </div>
+                        <div class="chapter-actions">
+                            <a href="/paper/by-topic?subjectName=<%= encodeURIComponent(subjectName) %>&chapterNumber=<%= encodeURIComponent(ch.chapterNumber) %>" class="btn btn-primary">
+                                <i class="fas fa-eye"></i> View Questions
+                            </a>
+                            <a href="/question/add?paperName=By%20Topic&year=Unknown&subjectName=<%= encodeURIComponent(subjectName) %>&chapterNumber=<%= encodeURIComponent(ch.chapterNumber) %>" class="btn btn-success">
+                                <i class="fas fa-plus"></i> Add More Questions
+                            </a>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+</body>
+</html>

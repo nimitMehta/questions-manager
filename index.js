@@ -154,6 +154,9 @@ const questionsSchema = new mongoose.Schema({
     correctAnswer: { type: String, required: true }, // e.g., "option C"
     paperName: { type: String, required: true },
     year: { type: String, required: true },
+    subjectName: { type: String, required: false },
+    topicName: { type: String, required: false },
+    chapterNumber: { type: String, required: false },
     correctOptionDescription: { type: String, required: false }, // Made optional to allow image-only explanations
     explanationImage: { type: String, required: false } // Path to explanation image
 }, { timestamps: true });
@@ -368,29 +371,54 @@ app.post('/logout', (req, res) => {
     });
 });
 
-// Home route - list all papers (protected)
+// Home route - list papers and by-topic groups (protected)
 app.get('/', requireAuth, async (req, res) => {
-    // Get all unique paper combinations
-    const papers = await Question.aggregate([
-        {
-            $group: {
-                _id: { paperName: "$paperName", year: "$year" },
-                questionCount: { $sum: 1 }
-            }
-        },
-        {
-            $sort: { "_id.paperName": 1, "_id.year": -1 }
-        }
+    // Papers: group by paperName + year (exclude "By Topic" / "Unknown" for separate section)
+    const papersAgg = await Question.aggregate([
+        { $match: { $or: [{ paperName: { $ne: 'By Topic' } }, { year: { $ne: 'Unknown' } }] } },
+        { $group: { _id: { paperName: '$paperName', year: '$year' }, questionCount: { $sum: 1 } } },
+        { $sort: { '_id.paperName': 1, '_id.year': -1 } }
     ]);
-    
-    // Format papers for easier use in template
-    const papersList = papers.map(paper => ({
-        paperName: paper._id.paperName,
-        year: paper._id.year,
-        questionCount: paper.questionCount
+    const papersList = papersAgg.map(p => ({
+        paperName: p._id.paperName,
+        year: p._id.year,
+        questionCount: p.questionCount
     }));
-    
-    res.render('home', { papersList, username: req.session.username });
+
+    // By-topic: show only subjects on home (group by subjectName only)
+    const subjectAgg = await Question.aggregate([
+        { $match: { paperName: 'By Topic', year: 'Unknown' } },
+        { $group: { _id: '$subjectName', questionCount: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
+    const subjectList = subjectAgg.map(s => ({
+        subjectName: s._id || '',
+        questionCount: s.questionCount
+    }));
+
+    res.render('home', { papersList, subjectList, username: req.session.username });
+});
+
+// Subject detail: list chapters under a subject (chapterNumber.subjectName)
+app.get('/paper/by-subject', requireAuth, async (req, res) => {
+    const subjectName = req.query.subjectName;
+    if (!subjectName) return res.redirect('/');
+
+    const chapterAgg = await Question.aggregate([
+        { $match: { paperName: 'By Topic', year: 'Unknown', subjectName: subjectName } },
+        { $group: { _id: '$chapterNumber', questionCount: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
+    const chaptersList = chapterAgg.map(c => ({
+        chapterNumber: c._id || '',
+        questionCount: c.questionCount
+    }));
+
+    res.render('subjectDetail', {
+        subjectName,
+        chaptersList,
+        username: req.session.username
+    });
 });
 
 // View questions for a specific paper (protected)
@@ -399,35 +427,85 @@ app.get('/paper/:paperName/:year', requireAuth, async (req, res) => {
     const decodedPaperName = decodeURIComponent(paperName);
     const decodedYear = decodeURIComponent(year);
     
-    const questionsList = await Question.find({ 
-        paperName: decodedPaperName, 
-        year: decodedYear 
+    const questionsList = await Question.find({
+        paperName: decodedPaperName,
+        year: decodedYear
     }).sort({ createdAt: -1 });
     
-    res.render('viewQuestions', { 
-        questionsList, 
-        paperName: decodedPaperName, 
+    res.render('viewQuestions', {
+        questionsList,
+        paperName: decodedPaperName,
         year: decodedYear,
-        username: req.session.username 
+        displayTitle: null,
+        username: req.session.username
+    });
+});
+
+// View questions for a subject/topic/chapter group (protected)
+app.get('/paper/by-topic', requireAuth, async (req, res) => {
+    const { subjectName, topicName, chapterNumber } = req.query;
+    if (!subjectName && !topicName && !chapterNumber) {
+        return res.redirect('/');
+    }
+    
+    const filter = { paperName: 'By Topic', year: 'Unknown' };
+    if (subjectName) filter.subjectName = subjectName;
+    if (topicName) filter.topicName = topicName;
+    if (chapterNumber) filter.chapterNumber = chapterNumber;
+    
+    const questionsList = await Question.find(filter).sort({ createdAt: -1 });
+    const parts = [subjectName, topicName, chapterNumber ? `Ch. ${chapterNumber}` : ''].filter(Boolean);
+    const displayTitle = parts.length ? parts.join(' / ') : 'By Topic';
+    
+    res.render('viewQuestions', {
+        questionsList,
+        paperName: 'By Topic',
+        year: 'Unknown',
+        displayTitle,
+        isByTopic: true,
+        subjectName: subjectName || '',
+        topicName: topicName || '',
+        chapterNumber: chapterNumber || '',
+        username: req.session.username
     });
 });
 
 // Start adding questions - get paper name and year, redirect to add page (protected)
 app.post('/question/start', requireAuth, (req, res) => {
     const { paperName, year } = req.body;
-    // Encode paper name and year for URL
     const encodedPaperName = encodeURIComponent(paperName);
     const encodedYear = encodeURIComponent(year);
     res.redirect(`/question/add?paperName=${encodedPaperName}&year=${encodedYear}`);
 });
 
-// Get add question page with paper name and year (protected)
+// Start adding questions by subject/topic/chapter (year = Unknown) (protected)
+app.post('/question/start-by-topic', requireAuth, (req, res) => {
+    const { subjectName, topicName, chapterNumber } = req.body;
+    const paperName = 'By Topic';
+    const year = 'Unknown';
+    const params = new URLSearchParams({
+        paperName,
+        year,
+        subjectName: subjectName || '',
+        topicName: topicName || '',
+        chapterNumber: chapterNumber || ''
+    });
+    res.redirect(`/question/add?${params.toString()}`);
+});
+
+// Get add question page with paper name and year, or subject/topic/chapter (protected)
 app.get('/question/add', requireAuth, (req, res) => {
-    const { paperName, year } = req.query;
+    const { paperName, year, subjectName, topicName, chapterNumber } = req.query;
     if (!paperName || !year) {
         return res.redirect('/');
     }
-    res.render('addQuestion', { paperName, year });
+    res.render('addQuestion', {
+        paperName,
+        year,
+        subjectName: subjectName || '',
+        topicName: topicName || '',
+        chapterNumber: chapterNumber || ''
+    });
 });
 
 // Post add question (protected)
@@ -436,7 +514,7 @@ app.post('/question/add', requireAuth, upload.fields([
     { name: 'explanationImage', maxCount: 1 }
 ]), async (req, res) => {
     try {
-        const { question, paperName, year, correctAnswer, correctOptionDescription } = req.body;
+        const { question, paperName, year, correctAnswer, correctOptionDescription, subjectName, topicName, chapterNumber } = req.body;
         
         // Validate that either question text or question image is provided (or both)
         if (!question && !req.files?.questionImage) {
@@ -545,6 +623,9 @@ app.post('/question/add', requireAuth, upload.fields([
             correctAnswer, 
             paperName, 
             year, 
+            subjectName: subjectName || '',
+            topicName: topicName || '',
+            chapterNumber: chapterNumber || '',
             correctOptionDescription: correctOptionDescription || '',
             explanationImage: explanationImageUrl
         });
@@ -571,7 +652,7 @@ app.post('/question/edit/:questionId', requireAuth, upload.fields([
     { name: 'explanationImage', maxCount: 1 }
 ]), async (req, res) => {
     try {
-        const { question, paperName, year, correctAnswer, correctOptionDescription, deleteQuestionImage, deleteExplanationImage } = req.body;
+        const { question, paperName, year, correctAnswer, correctOptionDescription, subjectName, topicName, chapterNumber, deleteQuestionImage, deleteExplanationImage } = req.body;
         
         // Get existing question to check for old images
         const existingQuestion = await Question.findById(req.params.questionId);
@@ -725,11 +806,18 @@ app.post('/question/edit/:questionId', requireAuth, upload.fields([
             correctAnswer, 
             paperName, 
             year, 
+            subjectName: subjectName || '',
+            topicName: topicName || '',
+            chapterNumber: chapterNumber || '',
             correctOptionDescription: correctOptionDescription || '',
             explanationImage: explanationImageUrl
         });
         
-        // Redirect back to the paper's questions page
+        // Redirect back: by-topic group or paper
+        if (paperName === 'By Topic' && year === 'Unknown' && (subjectName || topicName || chapterNumber)) {
+            const q = new URLSearchParams({ subjectName: subjectName || '', topicName: topicName || '', chapterNumber: chapterNumber || '' });
+            return res.redirect(`/paper/by-topic?${q.toString()}`);
+        }
         const encodedPaperName = encodeURIComponent(paperName);
         const encodedYear = encodeURIComponent(year);
         res.redirect(`/paper/${encodedPaperName}/${encodedYear}`);
@@ -758,9 +846,17 @@ app.post('/question/delete/:questionId', requireAuth, async (req, res) => {
                 }
             }
             
+            await Question.findByIdAndDelete(req.params.questionId);
+            if (question.paperName === 'By Topic' && question.year === 'Unknown' && (question.subjectName || question.topicName || question.chapterNumber)) {
+                const q = new URLSearchParams({
+                    subjectName: question.subjectName || '',
+                    topicName: question.topicName || '',
+                    chapterNumber: question.chapterNumber || ''
+                });
+                return res.redirect(`/paper/by-topic?${q.toString()}`);
+            }
             const encodedPaperName = encodeURIComponent(question.paperName);
             const encodedYear = encodeURIComponent(question.year);
-            await Question.findByIdAndDelete(req.params.questionId);
             res.redirect(`/paper/${encodedPaperName}/${encodedYear}`);
         } else {
             res.redirect('/');

@@ -351,48 +351,71 @@
             </p>
         </div>
 
-        <!-- Add New Paper Form -->
+        <!-- Add Questions: choose Paper+Year OR Subject+Topic+Chapter -->
         <div class="add-form-card">
             <h3 class="text-center mb-4" style="color: #0f172a; font-weight: 700;">
-                <i class="fas fa-plus-circle"></i> Create New Paper
+                <i class="fas fa-plus-circle"></i> Start Adding Questions
             </h3>
-            <form action="/question/start" method="POST">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="mb-2 font-weight-bold" style="color: #0f172a;">
-                            <i class="fas fa-file-alt"></i> Paper Name
-                        </label>
-                        <input type="text" class="form-control" name="paperName" placeholder="Enter paper name" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="mb-2 font-weight-bold" style="color: #0f172a;">
-                            <i class="fas fa-calendar"></i> Year
-                        </label>
-                        <input type="text" class="form-control" name="year" placeholder="Enter year" required>
+            <p class="text-center text-muted mb-4">Enter either <strong>Paper name &amp; Year</strong> or <strong>Subject, Topic &amp; Chapter</strong> (year will be Unknown).</p>
+
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="border rounded p-4 h-100" style="border-color: #e2e8f0 !important;">
+                        <h5 class="mb-3" style="color: #0f172a;"><i class="fas fa-file-alt text-primary"></i> By Paper</h5>
+                        <form action="/question/start" method="POST">
+                            <div class="mb-3">
+                                <label class="mb-2 font-weight-bold" style="color: #0f172a;">Paper Name</label>
+                                <input type="text" class="form-control" name="paperName" placeholder="e.g. JEE Advanced" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="mb-2 font-weight-bold" style="color: #0f172a;">Year</label>
+                                <input type="text" class="form-control" name="year" placeholder="e.g. 2024" required>
+                            </div>
+                            <button class="btn btn-success w-100" type="submit">
+                                <i class="fas fa-plus"></i> Create Paper &amp; Add Questions
+                            </button>
+                        </form>
                     </div>
                 </div>
-                <div class="text-center mt-4">
-                    <button class="btn btn-success btn-lg" type="submit">
-                        <i class="fas fa-plus"></i> Create Paper & Start Adding Questions
-                    </button>
+                <div class="col-lg-6 mb-4">
+                    <div class="border rounded p-4 h-100" style="border-color: #e2e8f0 !important;">
+                        <h5 class="mb-3" style="color: #0f172a;"><i class="fas fa-tags text-info"></i> By Subject / Topic / Chapter</h5>
+                        <form action="/question/start-by-topic" method="POST">
+                            <div class="mb-3">
+                                <label class="mb-2 font-weight-bold" style="color: #0f172a;">Subject</label>
+                                <input type="text" class="form-control" name="subjectName" placeholder="e.g. Mathematics">
+                            </div>
+                            <div class="mb-3">
+                                <label class="mb-2 font-weight-bold" style="color: #0f172a;">Topic</label>
+                                <input type="text" class="form-control" name="topicName" placeholder="e.g. Calculus">
+                            </div>
+                            <div class="mb-3">
+                                <label class="mb-2 font-weight-bold" style="color: #0f172a;">Chapter Number</label>
+                                <input type="text" class="form-control" name="chapterNumber" placeholder="e.g. 5">
+                            </div>
+                            <button class="btn btn-primary w-100" type="submit">
+                                <i class="fas fa-plus"></i> Add Questions
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            </form>
         </div>
 
-        <!-- Papers List -->
+        <!-- Papers List (by Paper Name + Year) -->
         <div class="papers-container">
             <h2 class="section-title">
-                <i class="fas fa-list"></i> Question Papers 
+                <i class="fas fa-file-alt"></i> Papers (by name &amp; year)
                 <span class="badge badge-primary" style="background: #3b82f6;"><%= papersList.length %></span>
             </h2>
 
-            <% if (papersList.length === 0) { %>
+            <% if (papersList.length === 0 && topicGroupsList.length === 0) { %>
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
                     <h4>No papers yet</h4>
-                    <p>Start by creating your first paper using the form above!</p>
+                    <p>Use the form above to add questions by Paper or by Subject/Topic/Chapter.</p>
                 </div>
-            <% } else { %>
+            <% } else if (papersList.length > 0) { %>
                 <% papersList.forEach((paper) => { %>
                     <div class="paper-card">
                         <div class="paper-header">
@@ -414,6 +437,41 @@
                             </a>
                             <a href="/question/add?paperName=<%= encodeURIComponent(paper.paperName) %>&year=<%= encodeURIComponent(paper.year) %>" class="btn btn-info">
                                 <i class="fas fa-plus"></i> Add More Questions
+                            </a>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+
+        <!-- By Subject (year Unknown): click subject → chapters (chapterNumber.subjectName) → questions -->
+        <div class="papers-container" style="margin-top: 30px;">
+            <h2 class="section-title">
+                <i class="fas fa-tags"></i> By Subject
+                <span class="badge badge-primary" style="background: #0ea5e9;"><%= subjectList.length %></span>
+            </h2>
+
+            <% if (subjectList.length === 0) { %>
+                <p class="text-muted">No subjects yet. Use the right-hand form above to add questions by Subject, Topic &amp; Chapter.</p>
+            <% } else { %>
+                <% subjectList.forEach((subj) => { %>
+                    <div class="paper-card">
+                        <div class="paper-header">
+                            <div>
+                                <div class="paper-name">
+                                    <i class="fas fa-tags" style="color: #0ea5e9;"></i> <%= subj.subjectName || '—' %>
+                                </div>
+                            </div>
+                            <div class="question-count-badge">
+                                <i class="fas fa-question-circle"></i> <%= subj.questionCount %> Question<%= subj.questionCount !== 1 ? 's' : '' %>
+                            </div>
+                        </div>
+                        <div class="paper-actions">
+                            <a href="/paper/by-subject?subjectName=<%= encodeURIComponent(subj.subjectName) %>" class="btn btn-primary">
+                                <i class="fas fa-eye"></i> View Chapters
+                            </a>
+                            <a href="/question/add?paperName=By%20Topic&year=Unknown&subjectName=<%= encodeURIComponent(subj.subjectName) %>" class="btn btn-info">
+                                <i class="fas fa-plus"></i> Add Questions
                             </a>
                         </div>
                     </div>
