@@ -17,6 +17,8 @@
         .btn-primary:hover { background: #0284c7; transform: translateY(-2px); color: white; }
         .btn-success { background: #3b82f6; color: white; }
         .btn-success:hover { background: #2563eb; transform: translateY(-2px); color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; color: white; transform: translateY(-2px); }
         .chapters-container { background: white; border-radius: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 30px; border: 1px solid #e2e8f0; }
         .section-title { color: #0f172a; font-weight: 700; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
         .chapter-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; border-left: 4px solid #0ea5e9; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; transition: all 0.3s; }
@@ -35,6 +37,10 @@
         <div class="header-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                 <a href="/" class="btn btn-info"><i class="fas fa-arrow-left"></i> Back to Home</a>
+                <form method="POST" action="/paper/delete-subject" style="display: inline;" onsubmit="return confirm('Delete the whole subject &quot;<%= subjectName %>&quot; and all questions inside it? This cannot be undone.');">
+                    <input type="hidden" name="subjectName" value="<%= subjectName %>">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete subject &amp; all questions</button>
+                </form>
             </div>
             <div class="text-center">
                 <div class="subject-title"><i class="fas fa-tags" style="color: #0ea5e9;"></i> <%= subjectName %></div>
@@ -58,23 +64,31 @@
                     </a>
                 </div>
             <% } else { %>
-                <% chaptersList.forEach((ch) => { %>
+                <% chaptersList.forEach((ch) => {
+                    var displayLabel = ch.topicName ? (ch.chapterNumber ? ch.chapterNumber + ' - ' + ch.topicName : ch.topicName) : (ch.chapterNumber || '—');
+                %>
                     <div class="chapter-card">
                         <div class="chapter-header">
                             <div class="chapter-name">
-                                <i class="fas fa-book"></i> <%= ch.chapterNumber %>.<%= subjectName %>
+                                <i class="fas fa-book"></i> <%= displayLabel %>.<%= subjectName %>
                             </div>
                             <div class="question-count-badge">
                                 <i class="fas fa-question-circle"></i> <%= ch.questionCount %> Question<%= ch.questionCount !== 1 ? 's' : '' %>
                             </div>
                         </div>
                         <div class="chapter-actions">
-                            <a href="/paper/by-topic?subjectName=<%= encodeURIComponent(subjectName) %>&chapterNumber=<%= encodeURIComponent(ch.chapterNumber) %>" class="btn btn-primary">
+                            <a href="/paper/by-topic?subjectName=<%= encodeURIComponent(subjectName) %>&chapterNumber=<%= encodeURIComponent(ch.chapterNumber) %>&topicName=<%= encodeURIComponent(ch.topicName) %>" class="btn btn-primary">
                                 <i class="fas fa-eye"></i> View Questions
                             </a>
-                            <a href="/question/add?paperName=By%20Topic&year=Unknown&subjectName=<%= encodeURIComponent(subjectName) %>&chapterNumber=<%= encodeURIComponent(ch.chapterNumber) %>" class="btn btn-success">
+                            <a href="/question/add?paperName=By%20Topic&year=Unknown&subjectName=<%= encodeURIComponent(subjectName) %>&topicName=<%= encodeURIComponent(ch.topicName) %>&chapterNumber=<%= encodeURIComponent(ch.chapterNumber) %>" class="btn btn-success">
                                 <i class="fas fa-plus"></i> Add More Questions
                             </a>
+                            <form method="POST" action="/paper/delete-topic" style="display: inline;" onsubmit="return confirm('Delete this topic and all <%= ch.questionCount %> question(s) inside it? This cannot be undone.');">
+                                <input type="hidden" name="subjectName" value="<%= subjectName %>">
+                                <input type="hidden" name="topicName" value="<%= ch.topicName %>">
+                                <input type="hidden" name="chapterNumber" value="<%= ch.chapterNumber %>">
+                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete topic</button>
+                            </form>
                         </div>
                     </div>
                 <% }) %>

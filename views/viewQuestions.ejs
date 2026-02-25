@@ -430,10 +430,20 @@
                 <a href="/" class="btn btn-info">
                     <i class="fas fa-arrow-left"></i> Back to Papers
                 </a>
-                <% const addMoreUrl = typeof isByTopic !== 'undefined' && isByTopic && (subjectName || topicName || chapterNumber) ? '/question/add?paperName=By%20Topic&year=Unknown&subjectName=' + encodeURIComponent(subjectName || '') + '&topicName=' + encodeURIComponent(topicName || '') + '&chapterNumber=' + encodeURIComponent(chapterNumber || '') : '/question/add?paperName=' + encodeURIComponent(paperName) + '&year=' + encodeURIComponent(year); %>
-                <a href="<%= addMoreUrl %>" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Add More Questions
-                </a>
+                <div class="d-flex flex-wrap align-items-center">
+                    <% const addMoreUrl = typeof isByTopic !== 'undefined' && isByTopic && (subjectName || topicName || chapterNumber) ? '/question/add?paperName=By%20Topic&year=Unknown&subjectName=' + encodeURIComponent(subjectName || '') + '&topicName=' + encodeURIComponent(topicName || '') + '&chapterNumber=' + encodeURIComponent(chapterNumber || '') : '/question/add?paperName=' + encodeURIComponent(paperName) + '&year=' + encodeURIComponent(year); %>
+                    <a href="<%= addMoreUrl %>" class="btn btn-success mr-2">
+                        <i class="fas fa-plus"></i> Add More Questions
+                    </a>
+                    <% if (typeof isByTopic !== 'undefined' && isByTopic && (subjectName || topicName || chapterNumber) && !isUncategorized) { %>
+                        <form method="POST" action="/paper/delete-topic" style="display: inline;" onsubmit="return confirm('Delete all <%= questionsList.length %> question(s) in this topic? This cannot be undone.');">
+                            <input type="hidden" name="subjectName" value="<%= subjectName || '' %>">
+                            <input type="hidden" name="topicName" value="<%= topicName || '' %>">
+                            <input type="hidden" name="chapterNumber" value="<%= chapterNumber || '' %>">
+                            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete all in this topic</button>
+                        </form>
+                    <% } %>
+                </div>
             </div>
             <div class="paper-header-info">
                 <div class="paper-title-large">
@@ -469,7 +479,7 @@
                             <div class="question-number"><%= index + 1 %></div>
                         </div>
 
-                        <% if (question.subjectName || question.topicName || question.chapterNumber) { %>
+                        <% if (typeof isByTopic !== 'undefined' && isByTopic && (question.subjectName || question.topicName || question.chapterNumber)) { %>
                             <div class="question-meta mb-2" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
                                 <% if (question.subjectName) { %><span class="badge badge-secondary" style="background: #64748b; padding: 6px 10px; border-radius: 6px; font-size: 12px;"><i class="fas fa-book"></i> <%= question.subjectName %></span><% } %>
                                 <% if (question.topicName) { %><span class="badge badge-secondary" style="background: #3b82f6; padding: 6px 10px; border-radius: 6px; font-size: 12px;"><i class="fas fa-tag"></i> <%= question.topicName %></span><% } %>

@@ -385,32 +385,45 @@ app.get('/', requireAuth, async (req, res) => {
         questionCount: p.questionCount
     }));
 
-    // By-topic: show only subjects on home (group by subjectName only)
+    // By-topic: show only subjects on home (group by subjectName only); exclude empty subjectName so "View Chapters" works
     const subjectAgg = await Question.aggregate([
-        { $match: { paperName: 'By Topic', year: 'Unknown' } },
+        { $match: { paperName: 'By Topic', year: 'Unknown', subjectName: { $exists: true, $nin: [null, ''] } } },
         { $group: { _id: '$subjectName', questionCount: { $sum: 1 } } },
         { $sort: { _id: 1 } }
     ]);
-    const subjectList = subjectAgg.map(s => ({
-        subjectName: s._id || '',
-        questionCount: s.questionCount
-    }));
+    const subjectList = subjectAgg
+        .filter(s => s._id != null && String(s._id).trim() !== '')
+        .map(s => ({
+            subjectName: s._id || '',
+            questionCount: s.questionCount
+        }));
 
-    res.render('home', { papersList, subjectList, username: req.session.username });
+    // Count "By Topic" questions with no subject so we can show Uncategorized card
+    const uncategorizedCount = await Question.countDocuments({
+        paperName: 'By Topic',
+        year: 'Unknown',
+        $or: [{ subjectName: { $in: [null, ''] } }, { subjectName: { $exists: false } }]
+    });
+
+    res.render('home', { papersList, subjectList, uncategorizedCount: uncategorizedCount || 0, username: req.session.username });
 });
 
-// Subject detail: list chapters under a subject (chapterNumber.subjectName)
+// Subject detail: list chapters under a subject (group by chapterNumber + topicName so topics like "Living Kingdom" show as rows)
 app.get('/paper/by-subject', requireAuth, async (req, res) => {
     const subjectName = req.query.subjectName;
     if (!subjectName) return res.redirect('/');
 
     const chapterAgg = await Question.aggregate([
         { $match: { paperName: 'By Topic', year: 'Unknown', subjectName: subjectName } },
-        { $group: { _id: '$chapterNumber', questionCount: { $sum: 1 } } },
-        { $sort: { _id: 1 } }
+        { $group: {
+            _id: { chapterNumber: '$chapterNumber', topicName: '$topicName' },
+            questionCount: { $sum: 1 }
+        } },
+        { $sort: { '_id.chapterNumber': 1, '_id.topicName': 1 } }
     ]);
     const chaptersList = chapterAgg.map(c => ({
-        chapterNumber: c._id || '',
+        chapterNumber: c._id.chapterNumber || '',
+        topicName: c._id.topicName || '',
         questionCount: c.questionCount
     }));
 
@@ -466,6 +479,28 @@ app.get('/paper/by-topic', requireAuth, async (req, res) => {
         subjectName: subjectName || '',
         topicName: topicName || '',
         chapterNumber: chapterNumber || '',
+        username: req.session.username
+    });
+});
+
+// Uncategorized: "By Topic" questions with no subject (so user can view, edit, delete and fix metadata)
+app.get('/paper/uncategorized', requireAuth, async (req, res) => {
+    const questionsList = await Question.find({
+        paperName: 'By Topic',
+        year: 'Unknown',
+        $or: [{ subjectName: { $in: [null, ''] } }, { subjectName: { $exists: false } }]
+    }).sort({ createdAt: -1 });
+
+    res.render('viewQuestions', {
+        questionsList,
+        paperName: 'By Topic',
+        year: 'Unknown',
+        displayTitle: 'Uncategorized',
+        isByTopic: true,
+        isUncategorized: true,
+        subjectName: '',
+        topicName: '',
+        chapterNumber: '',
         username: req.session.username
     });
 });
@@ -813,10 +848,13 @@ app.post('/question/edit/:questionId', requireAuth, upload.fields([
             explanationImage: explanationImageUrl
         });
         
-        // Redirect back: by-topic group or paper
-        if (paperName === 'By Topic' && year === 'Unknown' && (subjectName || topicName || chapterNumber)) {
-            const q = new URLSearchParams({ subjectName: subjectName || '', topicName: topicName || '', chapterNumber: chapterNumber || '' });
-            return res.redirect(`/paper/by-topic?${q.toString()}`);
+        // Redirect back: by-topic group, uncategorized, or paper
+        if (paperName === 'By Topic' && year === 'Unknown') {
+            if (subjectName || topicName || chapterNumber) {
+                const q = new URLSearchParams({ subjectName: subjectName || '', topicName: topicName || '', chapterNumber: chapterNumber || '' });
+                return res.redirect(`/paper/by-topic?${q.toString()}`);
+            }
+            return res.redirect('/paper/uncategorized');
         }
         const encodedPaperName = encodeURIComponent(paperName);
         const encodedYear = encodeURIComponent(year);
@@ -825,6 +863,66 @@ app.post('/question/edit/:questionId', requireAuth, upload.fields([
         console.error('Error updating question:', error);
         res.status(500).send('Error updating question: ' + error.message);
     }
+});
+
+// Delete entire subject and all its questions (By Topic only) (protected)
+app.post('/paper/delete-subject', requireAuth, async (req, res) => {
+    const subjectName = req.body.subjectName || req.query.subjectName;
+    if (!subjectName || typeof subjectName !== 'string') {
+        return res.redirect('/');
+    }
+    const filter = { paperName: 'By Topic', year: 'Unknown', subjectName: subjectName.trim() };
+    const questions = await Question.find(filter);
+    for (const q of questions) {
+        if (q.questionImage && q.questionImage.includes('cloudinary')) {
+            try {
+                const publicId = extractPublicIdFromUrl(q.questionImage);
+                if (publicId) await cloudinary.uploader.destroy(publicId);
+            } catch (e) { console.error('Cloudinary delete question image:', e); }
+        }
+        if (q.explanationImage && q.explanationImage.includes('cloudinary')) {
+            try {
+                const publicId = extractPublicIdFromUrl(q.explanationImage);
+                if (publicId) await cloudinary.uploader.destroy(publicId);
+            } catch (e) { console.error('Cloudinary delete explanation image:', e); }
+        }
+    }
+    await Question.deleteMany(filter);
+    return res.redirect('/');
+});
+
+// Delete one topic (chapter+topic) and all its questions (protected)
+app.post('/paper/delete-topic', requireAuth, async (req, res) => {
+    const subjectName = req.body.subjectName || req.query.subjectName;
+    const topicName = req.body.topicName ?? req.query.topicName ?? '';
+    const chapterNumber = req.body.chapterNumber ?? req.query.chapterNumber ?? '';
+    if (!subjectName || typeof subjectName !== 'string') {
+        return res.redirect('/');
+    }
+    const filter = {
+        paperName: 'By Topic',
+        year: 'Unknown',
+        subjectName: subjectName.trim(),
+        topicName: (topicName || '').trim(),
+        chapterNumber: (chapterNumber || '').trim()
+    };
+    const questions = await Question.find(filter);
+    for (const q of questions) {
+        if (q.questionImage && q.questionImage.includes('cloudinary')) {
+            try {
+                const publicId = extractPublicIdFromUrl(q.questionImage);
+                if (publicId) await cloudinary.uploader.destroy(publicId);
+            } catch (e) { console.error('Cloudinary delete question image:', e); }
+        }
+        if (q.explanationImage && q.explanationImage.includes('cloudinary')) {
+            try {
+                const publicId = extractPublicIdFromUrl(q.explanationImage);
+                if (publicId) await cloudinary.uploader.destroy(publicId);
+            } catch (e) { console.error('Cloudinary delete explanation image:', e); }
+        }
+    }
+    await Question.deleteMany(filter);
+    return res.redirect('/paper/by-subject?subjectName=' + encodeURIComponent(subjectName.trim()));
 });
 
 // Delete question (protected)
@@ -847,13 +945,16 @@ app.post('/question/delete/:questionId', requireAuth, async (req, res) => {
             }
             
             await Question.findByIdAndDelete(req.params.questionId);
-            if (question.paperName === 'By Topic' && question.year === 'Unknown' && (question.subjectName || question.topicName || question.chapterNumber)) {
-                const q = new URLSearchParams({
-                    subjectName: question.subjectName || '',
-                    topicName: question.topicName || '',
-                    chapterNumber: question.chapterNumber || ''
-                });
-                return res.redirect(`/paper/by-topic?${q.toString()}`);
+            if (question.paperName === 'By Topic' && question.year === 'Unknown') {
+                if (question.subjectName || question.topicName || question.chapterNumber) {
+                    const q = new URLSearchParams({
+                        subjectName: question.subjectName || '',
+                        topicName: question.topicName || '',
+                        chapterNumber: question.chapterNumber || ''
+                    });
+                    return res.redirect(`/paper/by-topic?${q.toString()}`);
+                }
+                return res.redirect('/paper/uncategorized');
             }
             const encodedPaperName = encodeURIComponent(question.paperName);
             const encodedYear = encodeURIComponent(question.year);
